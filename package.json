@@ -19,6 +19,7 @@
   "homepage": "https://github.com/tomoki2025/corporate-news-notifier#readme",
   "dependencies": {
     "axios": "^1.10.0",
-    "cheerio": "^1.1.1"
+    "cheerio": "^1.1.1",
+    "nodemailer": "^7.0.5"
   }
 }
