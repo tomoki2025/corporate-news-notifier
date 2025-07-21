@@ -2,9 +2,8 @@ name: Send Email Every 5 Minutes
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # ← UTCで0時（JSTで9時）
+    - cron: '0 0 * * *'  # UTCで0時（JSTで毎朝9時）
   workflow_dispatch:
-
 
 jobs:
   send:
@@ -24,3 +23,6 @@ jobs:
 
       - name: Run mail script
         run: node send-mail.js
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
