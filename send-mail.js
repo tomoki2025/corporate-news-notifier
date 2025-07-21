@@ -1,20 +1,22 @@
-// send-mail.js
 const nodemailer = require('nodemailer');
+const { getNews } = require('./scrape-news');
 
 async function sendEmail() {
+  const news = await getNews();
+
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: 'tomokikadotani2020@gmail.com',
-      pass: 'uzdyknfnrpgpgmlm' // アプリパスワード（スペースなし）
+      user: process.env.GMAIL_USER,
+      pass: process.env.GMAIL_PASS
     }
   });
 
   const info = await transporter.sendMail({
-    from: '"通知ボット" <あなたのGmailアドレス>',
-    to: 'tomokikadotani2020@gmail.com',
-    subject: '定期通知テスト',
-    text: 'これはGitHub Actionsからの定期通知です。',
+    from: `"企業ニュースBot" <${process.env.GMAIL_USER}>`,
+    to: 'tomokikadotani2020@gmail.com',  // ← ここで送信先を指定！
+    subject: `本日の企業ニュース（${new Date().toLocaleDateString('ja-JP')}）`,
+    text: news,
   });
 
   console.log('メール送信成功:', info.messageId);
