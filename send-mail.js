@@ -12,7 +12,7 @@ async function sendEmail() {
 
   const info = await transporter.sendMail({
     from: '"通知ボット" <あなたのGmailアドレス>',
-    to: '送信先のメールアドレス',
+    to: 'tomokikadotani2020@gmail.com',
     subject: '定期通知テスト',
     text: 'これはGitHub Actionsからの定期通知です。',
   });
