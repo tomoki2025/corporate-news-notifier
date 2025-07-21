@@ -1,22 +1,23 @@
+// send-mail.js
 const nodemailer = require('nodemailer');
 
-async function sendMail(subject, text) {
+async function sendEmail() {
   const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-      user: process.env.MAIL_USER,
-      pass: process.env.MAIL_PASS,
-    },
+      user: 'tomokikadotani2020@gmail.com',
+      pass: 'uzdyknfnrpgpgmlm' // アプリパスワード（スペースなし）
+    }
   });
 
   const info = await transporter.sendMail({
-    from: `"News Notifier" <${process.env.MAIL_USER}>`,
-    to: 'tomokikadotani@kddi.com', // ←ここに通知を受け取りたい宛先を記入
-    subject,
-    text,
+    from: '"通知ボット" <あなたのGmailアドレス>',
+    to: '送信先のメールアドレス',
+    subject: '定期通知テスト',
+    text: 'これはGitHub Actionsからの定期通知です。',
   });
 
-  console.log('Email sent:', info.response);
+  console.log('メール送信成功:', info.messageId);
 }
 
-module.exports = sendMail;
+sendEmail().catch(console.error);
