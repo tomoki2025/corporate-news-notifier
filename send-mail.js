@@ -14,7 +14,7 @@ async function sendEmail() {
 
   const info = await transporter.sendMail({
     from: `"企業ニュースBot" <${process.env.GMAIL_USER}>`,
-    to: 'tomokikadotani2020@gmail.com',  // ← ここで送信先を指定！
+    to: 'tomokikadotani2020@gmail.com',  // 受信先アドレス（あなた自身）
     subject: `本日の企業ニュース（${new Date().toLocaleDateString('ja-JP')}）`,
     text: news,
   });
