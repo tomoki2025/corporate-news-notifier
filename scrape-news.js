@@ -1,60 +1,46 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
-const fs = require('fs');
-const path = require('path');
+const puppeteer = require('puppeteer');
 
-const TARGET_URL = 'https://10x.co.jp/news/';
-const SITE_ID = '10X';
-const DATA_DIR = './data';
-const OUTPUT_FILE = path.join(DATA_DIR, `${SITE_ID}.json`);
-const SENT_FILE = path.join(DATA_DIR, `${SITE_ID}_sent.json`);
+async function getNews() {
+  const browser = await puppeteer.launch({ headless: 'new' });
+  const page = await browser.newPage();
 
-function ensureDirSync(dir) {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
+  const companies = [
+    { name: '10X', url: 'https://10x.co.jp/news/' },
+    { name: 'Deeping Source', url: 'https://www.deepingsource.io/jp/news' },
+    { name: 'Sakana.AI', url: 'https://sakana.ai/blog/' },
+    { name: 'Groq', url: 'https://groq.com/groq-in-the-news/' },
+    { name: 'MODE', url: 'https://www.modenetworks.com/news/' },
+    { name: 'Idein', url: 'https://www.idein.jp/ja/news' },
+    { name: 'Datamesh', url: 'https://www.datamesh.co.jp/news.html' },
+    { name: 'Turing', url: 'https://tur.ing/news' },
+    { name: 'テンエックス', url: 'https://tx-inc.com/ja/press-jp/' },
+    { name: 'Tinker Mode', url: 'https://news.tinkermode.jp/' },
+    { name: 'Findy', url: 'https://findy.co.jp/news/' },
+    { name: 'MOV', url: 'https://mov.am/news' },
+    { name: 'SpaceData', url: 'https://spacedata.jp/news' }
+  ];
 
-async function scrapeAndFilterNewArticles() {
-  ensureDirSync(DATA_DIR);
+  const results = [];
 
-  const { data: html } = await axios.get(TARGET_URL);
-  const $ = cheerio.load(html);
-  const articles = [];
-
-  $('.link-card').each((_, el) => {
-    const $el = $(el);
-    const url = 'https://10x.co.jp' + $el.attr('href');
-    const title = $el.find('.link-card-title').text().trim();
-    const date = $el.find('.link-card-date').text().trim();
-    const category = $el.find('.link-card-category').text().trim();
-
-    articles.push({ title, url, date, category });
-  });
-
-  // 保存（全件）
-  fs.writeFileSync(OUTPUT_FILE, JSON.stringify(articles, null, 2), 'utf-8');
-
-  // 送信済みを読み込み（なければ空）
-  let sent = [];
-  if (fs.existsSync(SENT_FILE)) {
+  for (const company of companies) {
     try {
-      sent = JSON.parse(fs.readFileSync(SENT_FILE, 'utf-8'));
-    } catch (e) {
-      console.error('❌ JSON parse error in SENT_FILE:', e);
+      await page.goto(company.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+      const title = await page.title();
+      const firstHeadline = await page.evaluate(() => {
+        const el = document.querySelector('h1, h2, h3, article, li, p');
+        return el?.innerText?.trim() || '';
+      });
+
+      results.push({ name: company.name, url: company.url, headline: firstHeadline });
+    } catch (err) {
+      results.push({ name: company.name, url: company.url, headline: '取得失敗' });
     }
   }
 
-  const sentUrls = new Set(sent.map(a => a.url));
-  const newArticles = articles.filter(a => !sentUrls.has(a.url));
-
-  if (newArticles.length > 0) {
-    const updated = [...sent, ...newArticles];
-    fs.writeFileSync(SENT_FILE, JSON.stringify(updated, null, 2), 'utf-8');
-  }
-
-  console.log(`✅ 新着 ${newArticles.length} 件抽出`);
-  return newArticles;
+  await browser.close();
+  return results;
 }
 
-module.exports = { scrapeAndFilterNewArticles };
+// ←これがないと require で使えない！
+module.exports = { getNews };
