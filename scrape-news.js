@@ -2,22 +2,25 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 
 // 各社のURL一覧
-const companies = [
+
+ const companies = [
   {
     name: 'KDDI',
     url: 'https://www.kddi.com/corporate/news_release/',
     selector: '.newsList li a',
+    base: 'https://www.kddi.com'
   },
   {
     name: 'SoftBank',
     url: 'https://www.softbank.jp/corp/news/press/',
-    selector: '.p-press__list a',
+    selector: '.c-news-articleList__item a',
+    base: 'https://www.softbank.jp'
   },
   {
     name: '10X',
     url: 'https://10x.co.jp/news/',
-    selector: 'a.newsListItem',
-    base: 'https://10x.co.jp',
+    selector: 'a.news-list__item',
+    base: 'https://10x.co.jp'
   }
   // 必要に応じて追加
 ];
