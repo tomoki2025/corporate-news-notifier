@@ -12,14 +12,14 @@ const companies = [
     name: 'SoftBank',
     url: 'https://www.softbank.jp/corp/news/press/',
     selector: '.p-press__list a',
-  }
+  },
   {
-  name: '10X',
-  url: 'https://10x.co.jp/news/',
-  selector: 'a.newsListItem',
-  base: 'https://10x.co.jp'
-}
-// 必要に応じて追加
+    name: '10X',
+    url: 'https://10x.co.jp/news/',
+    selector: 'a.newsListItem',
+    base: 'https://10x.co.jp',
+  }
+  // 必要に応じて追加
 ];
 
 // ニュース取得関数
@@ -32,15 +32,16 @@ async function getNews() {
       const $ = cheerio.load(data);
       const links = $(company.selector);
 
-      links.slice(0, 3).each((_, el) => {
-  const text = $(el).text().trim();
-  const href = $(el).attr('href');
-  const url = href.startsWith('http') 
-    ? href 
-    : (company.base ? company.base + href : href);
-  latest.push(`・${text} - ${url}`);
-});
+      const latest = [];  // ← これが抜けてた！
 
+      links.slice(0, 3).each((_, el) => {
+        const text = $(el).text().trim();
+        const href = $(el).attr('href');
+        const url = href.startsWith('http')
+          ? href
+          : (company.base ? company.base + href : href);
+        latest.push(`・${text} - ${url}`);
+      });
 
       results.push(`【${company.name}】\n${latest.join('\n')}\n`);
     } catch (err) {
