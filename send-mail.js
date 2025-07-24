@@ -8,8 +8,8 @@ async function sendEmail() {
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: {
-      user: process.env.MAIL_FROM,
-      pass: process.env.MAIL_PASS,
+      user: process.env.GMAIL_USER, // Secrets名に合わせて修正済み
+      pass: process.env.GMAIL_PASS,
     },
   });
 
@@ -20,8 +20,8 @@ async function sendEmail() {
       : "本日の新着企業ニュースはありませんでした。";
 
   await transporter.sendMail({
-    from: process.env.MAIL_FROM,
-    to: process.env.MAIL_TO,
+    from: process.env.GMAIL_USER,
+    to: process.env.GMAIL_USER, // 自分宛。必要に応じて process.env.GMAIL_TO に変更可能
     subject,
     text: content,
   });
