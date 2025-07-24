@@ -22,15 +22,17 @@ async function getNews() {
     try {
       await page.goto(company.url, { waitUntil: 'domcontentloaded' });
       const elements = await page.$$eval(company.selector, (els) =>
-  els.slice(0, 3).map((el) => {
-    const date = el.querySelector('time')?.textContent.trim() || '';
-    const title = el.querySelector('p')?.textContent.trim() || '';
-    const href = el.href;
-    return {
-      text: `${date} ${title}`,
-      href
-    };
-  })
+  els.slice(0, 3)
+    .map((el) => {
+      const date = el.querySelector('time')?.textContent.trim() || '';
+      const title = el.querySelector('p')?.textContent.trim() || '';
+      const href = el.href;
+      return {
+        text: `${date} ${title}`.trim(),
+        href
+      };
+    })
+    .filter(el => el.text.length > 0)  // ← ここが追加ポイント！
 );
 
 
