@@ -1,8 +1,8 @@
-name: Send Email Every 5 Minutes
+name: Send Email Every Day
 
 on:
   schedule:
-    - cron: '0 1 * * *'  # JSTで10時（UTC 1時）
+    - cron: '0 0 * * *' # JST 9時
   workflow_dispatch:
 
 jobs:
@@ -26,6 +26,9 @@ jobs:
 
       - name: Install dotenv
         run: npm install dotenv
+
+      - name: Create data directory if not exists
+        run: mkdir -p data
 
       - name: Run mail script
         run: node send-mail.js
