@@ -2,7 +2,7 @@ name: Send Email Every 5 Minutes
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # UTCで0時（JSTで毎朝9時）
+  - cron: '0 1 * * *'  # 修正後：UTCで1時（JSTで10時）
   workflow_dispatch:
 
 jobs:
