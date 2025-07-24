@@ -5,7 +5,10 @@ const { getNews, saveNews } = require("./scrape-news");
 const BASE_URL = "https://spacedata.jp/news";
 
 async function scrapeSpacedata() {
-  const browser = await puppeteer.launch({ headless: "new" });
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"]
+  });
   const page = await browser.newPage();
   await page.goto(BASE_URL, { waitUntil: "domcontentloaded" });
 
@@ -26,17 +29,7 @@ async function scrapeSpacedata() {
   });
 
   await browser.close();
-
-  const existing = await getNews();
-  const existingUrls = new Set(existing.map(n => n.url));
-  const filtered = newItems.filter(n => !existingUrls.has(n.url));
-
-  if (filtered.length > 0) {
-    const updated = [...filtered, ...existing];
-    await saveNews(updated);
-  }
-
-  console.log(`✅ SpaceData: ${filtered.length} 件の新着ニュースを追加`);
+  return newItems;
 }
 
-scrapeSpacedata();
+module.exports = scrapeSpacedata;
