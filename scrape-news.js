@@ -31,7 +31,8 @@ async function getNews() {
       const { data } = await axios.get(company.url);
       const $ = cheerio.load(data);
       const links = $(company.selector);
-
+　　　 console.log(`【${company.name}】 found ${links.length} elements`); // ← 追加
+      
       const latest = [];  // ← これが抜けてた！
 
       links.slice(0, 3).each((_, el) => {
