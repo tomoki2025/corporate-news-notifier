@@ -1,30 +1,32 @@
-const nodemailer = require('nodemailer');
-const fs = require('fs');
-const { getNews } = require('./scrape-news');
-require('dotenv').config();
+require("dotenv").config();
+const nodemailer = require("nodemailer");
+const { getNews } = require("./scrape-news");
 
 async function sendEmail() {
   const news = await getNews();
 
   const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    service: "gmail",
     auth: {
-      user: process.env.GMAIL_USER,
-      pass: process.env.GMAIL_PASS
-    }
+      user: process.env.MAIL_FROM,
+      pass: process.env.MAIL_PASS,
+    },
   });
 
-  const subject = `本日の企業ニュース（${new Date().toLocaleDateString('ja-JP')}）`;
-  const body = news.trim().length === 0 ? '本日の新着ニュースはありません。' : news;
+  const subject = news.length > 0 ? "📰 本日の新着企業ニュース" : "📭 本日の新着ニュースはありません";
+  const content =
+    news.length > 0
+      ? news.map((n) => `・${n.date}｜${n.company}｜${n.title}｜${n.url}`).join("\n")
+      : "本日の新着企業ニュースはありませんでした。";
 
-  const info = await transporter.sendMail({
-    from: `"企業ニュースBot" <${process.env.GMAIL_USER}>`,
-    to: 'tomokikadotani2020@gmail.com',
+  await transporter.sendMail({
+    from: process.env.MAIL_FROM,
+    to: process.env.MAIL_TO,
     subject,
-    text: body
+    text: content,
   });
 
-  console.log('メール送信完了:', info.messageId);
+  console.log("✅ メール送信完了");
 }
 
-sendEmail().catch(console.error);
+sendEmail();
