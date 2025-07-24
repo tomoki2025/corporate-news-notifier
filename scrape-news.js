@@ -4,7 +4,7 @@ const companies = [
   {
     name: '10X',
     url: 'https://10x.co.jp/news/',
-    selector: 'article.news-card',
+    selector: '[aria-label="ニュース一覧"] a',
     base: 'https://10x.co.jp'
   }
 ];
@@ -20,26 +20,21 @@ async function getNews() {
 
   for (const company of companies) {
     try {
-      await page.goto(company.url, { waitUntil: 'networkidle0' });
+      await page.goto(company.url, { waitUntil: 'networkidle2' });
 
-      const elements = await page.$$eval(company.selector, (articles) =>
-        articles.slice(0, 3).map((el) => {
-          const date = el.querySelector('time')?.textContent.trim() || '';
-          const category = el.querySelector('.news-card__category')?.textContent.trim() || '';
-          const title = el.querySelector('.news-card__title')?.textContent.trim() || '';
-          const href = el.querySelector('a')?.href || '';
-          return {
-            text: `${date} [${category}] ${title}`,
-            href
-          };
+      const elements = await page.$$eval(company.selector, (anchors) =>
+        anchors.slice(0, 3).map((el) => {
+          const text = el.textContent.trim().replace(/\s+/g, ' ');
+          const href = el.href;
+          return { text, href };
         })
       );
 
       console.log(`【${company.name}】 found ${elements.length} elements`);
 
       if (elements.length > 0) {
-        const latest = elements.map(el => `・${el.text} - ${el.href}`);
-        results.push(`【${company.name}】\n${latest.join('\n')}\n`);
+        const newsText = elements.map(el => `・${el.text} - ${el.href}`).join('\n');
+        results.push(`【${company.name}】\n${newsText}\n`);
       } else {
         results.push(`【${company.name}】記事なし\n`);
       }
