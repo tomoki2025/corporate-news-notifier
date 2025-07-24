@@ -1,6 +1,6 @@
-import axios from 'axios';
-import * as cheerio from 'cheerio';
-import fs from 'fs';
+const axios = require('axios');
+const cheerio = require('cheerio');
+const fs = require('fs');
 
 const TARGET_URL = 'https://10x.co.jp/news/';
 const SITE_ID = '10X';
