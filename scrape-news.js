@@ -4,7 +4,7 @@ const companies = [
   {
     name: '10X',
     url: 'https://10x.co.jp/news/',
-    selector: 'a.news-list__item',
+    selector: 'article.news-card',
     base: 'https://10x.co.jp'
   }
 ];
@@ -20,20 +20,16 @@ async function getNews() {
 
   for (const company of companies) {
     try {
-      await page.goto(company.url, { waitUntil: 'domcontentloaded' });
+      await page.goto(company.url, { waitUntil: 'networkidle0' });
 
-      const elements = await page.$$eval(company.selector, (els) =>
-        els.map((el) => {
+      const elements = await page.$$eval(company.selector, (articles) =>
+        articles.slice(0, 3).map((el) => {
           const date = el.querySelector('time')?.textContent.trim() || '';
-          const category = el.querySelector('.news-list__category')?.textContent.trim() || '';
-          const title = el.querySelector('.news-list__title')?.textContent.trim() || '';
-          const excerpt = el.querySelector('.news-list__excerpt')?.textContent.trim() || '';
-          const href = el.href;
+          const category = el.querySelector('.news-card__category')?.textContent.trim() || '';
+          const title = el.querySelector('.news-card__title')?.textContent.trim() || '';
+          const href = el.querySelector('a')?.href || '';
           return {
-            date,
-            category,
-            title,
-            excerpt,
+            text: `${date} [${category}] ${title}`,
             href
           };
         })
@@ -42,10 +38,8 @@ async function getNews() {
       console.log(`【${company.name}】 found ${elements.length} elements`);
 
       if (elements.length > 0) {
-        const formatted = elements.map(el =>
-          `・${el.date} [${el.category}] ${el.title}\n　${el.excerpt}\n　${el.href}`
-        );
-        results.push(`【${company.name}】\n${formatted.join('\n')}\n`);
+        const latest = elements.map(el => `・${el.text} - ${el.href}`);
+        results.push(`【${company.name}】\n${latest.join('\n')}\n`);
       } else {
         results.push(`【${company.name}】記事なし\n`);
       }
