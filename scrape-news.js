@@ -1,9 +1,7 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
+const puppeteer = require('puppeteer');
 
-// 各社のURL一覧
-
- const companies = [
+// 各社のURL一覧とセレクタ
+const companies = [
   {
     name: 'KDDI',
     url: 'https://www.kddi.com/corporate/news_release/',
@@ -22,37 +20,37 @@ const cheerio = require('cheerio');
     selector: 'a.news-list__item',
     base: 'https://10x.co.jp'
   }
-  // 必要に応じて追加
 ];
 
-// ニュース取得関数
 async function getNews() {
+  const browser = await puppeteer.launch({ headless: 'new' }); // Puppeteer v20以降は 'new' 推奨
+  const page = await browser.newPage();
   const results = [];
 
   for (const company of companies) {
     try {
-      const { data } = await axios.get(company.url);
-      const $ = cheerio.load(data);
-      const links = $(company.selector);
-　　　 console.log(`【${company.name}】 found ${links.length} elements`); // ← 追加
-      
-      const latest = [];  // ← これが抜けてた！
+      await page.goto(company.url, { waitUntil: 'domcontentloaded' });
 
-      links.slice(0, 3).each((_, el) => {
-        const text = $(el).text().trim();
-        const href = $(el).attr('href');
-        const url = href.startsWith('http')
-          ? href
-          : (company.base ? company.base + href : href);
-        latest.push(`・${text} - ${url}`);
-      });
+      const elements = await page.$$eval(company.selector, (els) =>
+        els.slice(0, 3).map((el) => {
+          return {
+            text: el.innerText.trim(),
+            href: el.href
+          };
+        })
+      );
 
+      console.log(`【${company.name}】 found ${elements.length} elements`);
+
+      const latest = elements.map(el => `・${el.text} - ${el.href}`);
       results.push(`【${company.name}】\n${latest.join('\n')}\n`);
+
     } catch (err) {
       results.push(`【${company.name}】取得エラー: ${err.message}`);
     }
   }
 
+  await browser.close();
   return results.join('\n');
 }
 
