@@ -4,7 +4,7 @@ const companies = [
   {
     name: '10X',
     url: 'https://10x.co.jp/news/',
-    selector: 'a.news-list__item',
+    selector: 'li.news-list__item',
     base: 'https://10x.co.jp'
   }
 ];
@@ -22,19 +22,19 @@ async function getNews() {
     try {
       await page.goto(company.url, { waitUntil: 'domcontentloaded' });
       const elements = await page.$$eval(company.selector, (els) =>
-  els.slice(0, 3)
-    .map((el) => {
-      const date = el.querySelector('time')?.textContent.trim() || '';
-      const title = el.querySelector('p')?.textContent.trim() || '';
-      const href = el.href;
-      return {
-        text: `${date} ${title}`.trim(),
-        href
-      };
-    })
-    .filter(el => el.text.length > 0)  // ← ここが追加ポイント！
-);
-
+        els.slice(0, 3)
+          .map((el) => {
+            const anchor = el.querySelector('a');
+            const date = el.querySelector('time')?.textContent.trim() || '';
+            const title = el.querySelector('p')?.textContent.trim() || '';
+            const href = anchor?.href || '';
+            return {
+              text: `${date} ${title}`.trim(),
+              href
+            };
+          })
+          .filter(el => el.text.length > 0)
+      );
 
       console.log(`【${company.name}】 found ${elements.length} elements`);
 
