@@ -1,19 +1,6 @@
 const puppeteer = require('puppeteer');
 
-// 各社のURL一覧とセレクタ
 const companies = [
-  {
-    name: 'KDDI',
-    url: 'https://www.kddi.com/corporate/news_release/',
-    selector: '.newsList li a',
-    base: 'https://www.kddi.com'
-  },
-  {
-    name: 'SoftBank',
-    url: 'https://www.softbank.jp/corp/news/press/',
-    selector: '.c-news-articleList__item a',
-    base: 'https://www.softbank.jp'
-  },
   {
     name: '10X',
     url: 'https://10x.co.jp/news/',
@@ -23,10 +10,7 @@ const companies = [
 ];
 
 async function getNews() {
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
+  const browser = await puppeteer.launch({ headless: 'new' });
   const page = await browser.newPage();
   const results = [];
 
@@ -45,8 +29,12 @@ async function getNews() {
 
       console.log(`【${company.name}】 found ${elements.length} elements`);
 
-      const latest = elements.map(el => `・${el.text} - ${el.href}`);
-      results.push(`【${company.name}】\n${latest.join('\n')}\n`);
+      if (elements.length > 0) {
+        const latest = elements.map(el => `・${el.text} - ${el.href}`);
+        results.push(`【${company.name}】\n${latest.join('\n')}\n`);
+      } else {
+        results.push(`【${company.name}】記事なし\n`);
+      }
 
     } catch (err) {
       results.push(`【${company.name}】取得エラー: ${err.message}`);
