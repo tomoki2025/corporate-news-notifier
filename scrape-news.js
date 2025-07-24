@@ -21,15 +21,18 @@ async function getNews() {
   for (const company of companies) {
     try {
       await page.goto(company.url, { waitUntil: 'domcontentloaded' });
-
       const elements = await page.$$eval(company.selector, (els) =>
-        els.slice(0, 3).map((el) => {
-          return {
-            text: el.innerText.trim(),
-            href: el.href
-          };
-        })
-      );
+  els.slice(0, 3).map((el) => {
+    const date = el.querySelector('time')?.textContent.trim() || '';
+    const title = el.querySelector('p')?.textContent.trim() || '';
+    const href = el.href;
+    return {
+      text: `${date} ${title}`,
+      href
+    };
+  })
+);
+
 
       console.log(`【${company.name}】 found ${elements.length} elements`);
 
