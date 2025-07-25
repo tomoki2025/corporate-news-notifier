@@ -7,19 +7,15 @@ const puppeteer = require("puppeteer");
     headless: "new",
     args: ["--no-sandbox"],
   });
-  const page = await browser.newPage();
-  await page.goto("https://spacedata.jp/news", { waitUntil: "domcontentloaded" });
 
-  try {
-    await page.waitForSelector(".sd a.appear", { timeout: 5000 });
-  } catch (e) {
-    console.log("⚠️ 記事セレクタが見つかりませんでした");
-    await browser.close();
-    return;
-  }
+  const page = await browser.newPage();
+  await page.goto("https://spacedata.jp/news", { waitUntil: "networkidle2", timeout: 0 });
+
+  // セレクタが描画されるまで最大10秒待機
+  await page.waitForSelector(".contents_list a", { timeout: 10000 });
 
   const articles = await page.evaluate(() => {
-    const nodes = document.querySelectorAll(".sd a.appear");
+    const nodes = document.querySelectorAll(".contents_list a");
     const items = [];
 
     nodes.forEach((el) => {
@@ -27,7 +23,7 @@ const puppeteer = require("puppeteer");
       const url = el.href;
       const date = el.querySelector(".date")?.textContent?.trim() || "";
 
-      if (title && url) {
+      if (title && url && date) {
         items.push({ title, url, date });
       }
     });
