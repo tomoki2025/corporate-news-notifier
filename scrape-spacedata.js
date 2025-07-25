@@ -1,45 +1,26 @@
-const puppeteer = require("puppeteer");
-const fs = require("fs");
-const path = require("path");
+const puppeteer = require('puppeteer');
 
-const DATA_FILE = path.join("data", "spacedata.json");
-
-async function scrape() {
+(async () => {
   const browser = await puppeteer.launch({
-    headless: "new",
-    args: ["--no-sandbox"], // ← これを追加！
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
 
   const page = await browser.newPage();
-  await page.goto("https://spacedata.jp/news", { waitUntil: "networkidle2" });
+  await page.goto('https://spacedata.jp/news', { waitUntil: 'domcontentloaded' });
 
-  await page.waitForSelector("a.sd.appear", { timeout: 10000 });
-
-  const newsItems = await page.evaluate(() => {
-    const anchors = Array.from(document.querySelectorAll("a.sd.appear"));
-    return anchors.map(anchor => {
-      const titleElement = anchor.querySelector("h2");
-      const dateElement = anchor.querySelector("time");
-      return {
-        title: titleElement ? titleElement.textContent.trim() : "",
-        url: anchor.href,
-        date: dateElement ? dateElement.textContent.trim() : "",
-      };
+  const articles = await page.evaluate(() => {
+    const items = Array.from(document.querySelectorAll('a.sd.appear'));
+    return items.map(item => {
+      const title = item.querySelector('.title')?.innerText || '';
+      const date = item.querySelector('.date')?.innerText || '';
+      const url = item.href || '';
+      return { title, date, url };
     });
   });
 
-  console.log(`✅ 取得した記事数: ${newsItems.length}`);
-  console.log(newsItems);
-
-  if (!fs.existsSync("data")) {
-    fs.mkdirSync("data");
-  }
-
-  fs.writeFileSync(DATA_FILE, JSON.stringify(newsItems, null, 2), "utf-8");
+  console.log('✅ 取得した記事数:', articles.length);
+  console.log(JSON.stringify(articles, null, 2));
 
   await browser.close();
-}
-
-scrape().catch(err => {
-  console.error("❌ スクレイピング中にエラー:", err);
-});
+})();
