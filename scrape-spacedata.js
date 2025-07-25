@@ -16,20 +16,14 @@ const outputFile = path.join(dataDir, 'spacedata.json');
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 0 });
 
   try {
-    await page.waitForSelector('a.sd.appear', { timeout: 15000 });
+    await page.waitForSelector('.newsList__item', { timeout: 15000 });
 
-    const anchors = await page.$$eval('a.sd.appear', as => 
-      as
-        .filter(a => a.href.includes('/news/')) // ニュースのみ対象
-        .map(a => {
-          const titleEl = a.querySelectorAll('p.text.sd.appear')[2]; // タイトル
-          const dateEl = a.querySelectorAll('p.text.sd.appear')[0]; // 日付
-          return {
-            title: titleEl ? titleEl.innerText.trim() : '',
-            date: dateEl ? dateEl.innerText.trim() : '',
-            url: a.href
-          };
-        })
+    const anchors = await page.$$eval('.newsList__item a', as =>
+      as.map(a => ({
+        title: a.querySelector('.newsList__title')?.innerText.trim() || '',
+        date: a.querySelector('.newsList__date')?.innerText.trim() || '',
+        url: a.href
+      }))
     );
 
     console.log(`✅ anchor length: ${anchors.length}`);
