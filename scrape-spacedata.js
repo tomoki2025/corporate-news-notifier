@@ -2,59 +2,44 @@ const puppeteer = require("puppeteer");
 const fs = require("fs");
 const path = require("path");
 
-(async () => {
-  const browser = await puppeteer.launch({
-    headless: "new",
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+const DATA_FILE = path.join("data", "spacedata.json");
+
+async function scrape() {
+  const browser = await puppeteer.launch({ headless: "new" });
   const page = await browser.newPage();
-  await page.goto("https://spacedata.jp/news", { waitUntil: "domcontentloaded" });
 
-  const newItems = await page.evaluate(() => {
+  await page.goto("https://spacedata.jp/news", { waitUntil: "networkidle2" });
+
+  // 必要な要素が現れるまで待機
+  await page.waitForSelector("a.sd.appear", { timeout: 10000 });
+
+  const newsItems = await page.evaluate(() => {
     const anchors = Array.from(document.querySelectorAll("a.sd.appear"));
-    return anchors.map((a) => {
-      const url = a.href;
-      const ps = a.querySelectorAll("p.text");
-
+    return anchors.map(anchor => {
+      const titleElement = anchor.querySelector("h2");
+      const dateElement = anchor.querySelector("time");
       return {
-        date: ps[0]?.innerText.trim() || "日付不明",
-        company: "SpaceData",
-        title: ps[2]?.innerText.trim() || "タイトル不明",
-        url: url.startsWith("http") ? url : `https://spacedata.jp/${url.replace(/^\//, "")}`,
+        title: titleElement ? titleElement.textContent.trim() : "",
+        url: anchor.href,
+        date: dateElement ? dateElement.textContent.trim() : "",
       };
     });
   });
 
-  const dataDir = path.join(__dirname, "data");
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir);
+  console.log(`✅ 取得した記事数: ${newsItems.length}`);
+  console.log(newsItems);
+
+  // 保存用ディレクトリがなければ作成
+  if (!fs.existsSync("data")) {
+    fs.mkdirSync("data");
   }
 
-  const filePath = path.join(dataDir, "spacedata.json");
-  let existingItems = [];
-
-  if (fs.existsSync(filePath)) {
-    const raw = fs.readFileSync(filePath, "utf8");
-    try {
-      existingItems = JSON.parse(raw);
-    } catch (e) {
-      console.error("JSON parse error:", e);
-    }
-  }
-
-  const existingUrls = new Set(existingItems.map((item) => item.url));
-  const newUniqueItems = newItems.filter((item) => !existingUrls.has(item.url));
-
-  if (newUniqueItems.length > 0) {
-    const updatedItems = [...newUniqueItems, ...existingItems];
-    fs.writeFileSync(filePath, JSON.stringify(updatedItems, null, 2), "utf8");
-  }
-
-  fs.writeFileSync(
-    path.join(dataDir, "spacedata_diff.json"),
-    JSON.stringify(newUniqueItems, null, 2),
-    "utf8"
-  );
+  // JSONファイルに保存
+  fs.writeFileSync(DATA_FILE, JSON.stringify(newsItems, null, 2), "utf-8");
 
   await browser.close();
-})();
+}
+
+scrape().catch(err => {
+  console.error("❌ スクレイピング中にエラー:", err);
+});
