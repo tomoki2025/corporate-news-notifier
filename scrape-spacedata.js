@@ -7,12 +7,15 @@ const dataDir = path.join(__dirname, 'data');
 const outputFile = path.join(dataDir, 'spacedata.json');
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: 'new' });
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
+
   const page = await browser.newPage();
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 0 });
 
   try {
-    // 👇 ここが重要：明確に <a class="sd appear"> を待つ
     await page.waitForSelector('a.sd.appear', { timeout: 15000 });
 
     const anchors = await page.$$eval('a.sd.appear', as =>
