@@ -7,15 +7,16 @@ const puppeteer = require("puppeteer");
     headless: "new",
     args: ["--no-sandbox"],
   });
-
   const page = await browser.newPage();
-  await page.goto("https://spacedata.jp/news", { waitUntil: "networkidle2", timeout: 0 });
+  await page.goto("https://spacedata.jp/news", { waitUntil: "domcontentloaded" });
 
-  // セレクタが描画されるまで最大10秒待機
-  await page.waitForSelector(".contents_list a", { timeout: 10000 });
+  // HTML全体を一度取得してログ出力（調査用）
+  const html = await page.content();
+  // console.log(html); // ← デバッグ用に必要なら出す
 
+  // 適切なセレクタを使用（修正済み）
   const articles = await page.evaluate(() => {
-    const nodes = document.querySelectorAll(".contents_list a");
+    const nodes = document.querySelectorAll(".sd a.appear");
     const items = [];
 
     nodes.forEach((el) => {
@@ -23,7 +24,7 @@ const puppeteer = require("puppeteer");
       const url = el.href;
       const date = el.querySelector(".date")?.textContent?.trim() || "";
 
-      if (title && url && date) {
+      if (title && url) {
         items.push({ title, url, date });
       }
     });
