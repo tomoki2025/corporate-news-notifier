@@ -1,52 +1,47 @@
-const puppeteer = require('puppeteer');
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
+const puppeteer = require("puppeteer");
+
+const url = "https://spacedata.jp/news";
+const dataFilePath = path.join(__dirname, "data", "spacedata.json");
 
 (async () => {
   const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
+    headless: "new",
+    args: ["--no-sandbox", "--disable-setuid-sandbox"]
   });
   const page = await browser.newPage();
-  await page.goto('https://spacedata.jp/news', { waitUntil: 'domcontentloaded' });
+  await page.goto(url, { waitUntil: "networkidle2" });
 
-  const articles = await page.$$eval('a.sd.appear', (links) => {
-    return links.map((el) => {
-      const href = el.getAttribute('href');
-      const textBlocks = el.querySelectorAll('p');
-      const dateText = textBlocks.length >= 1 ? textBlocks[0].textContent.trim() : '';
-      const category = textBlocks.length >= 2 ? textBlocks[1].textContent.trim() : '';
-      const title = textBlocks.length >= 3 ? textBlocks[2].textContent.trim() : '';
-      const description = textBlocks.length >= 4 ? textBlocks[3].textContent.trim() : '';
-      return {
-        date: dateText,
-        category,
-        title,
-        description,
-        url: 'https://spacedata.jp/' + href
-      };
-    });
+  // 正しいセレクタでニュースを取得
+  const articles = await page.evaluate(() => {
+    const anchors = Array.from(document.querySelectorAll(".news_list li a"));
+    return anchors.map((a) => ({
+      title: a.querySelector("p")?.innerText.trim(),
+      url: a.href,
+      date: a.querySelector("time")?.innerText.trim()
+    }));
   });
 
   await browser.close();
 
-  // 保存先
-  const filePath = path.resolve(__dirname, 'spacedata.json');
-  const prevData = fs.existsSync(filePath)
-    ? JSON.parse(fs.readFileSync(filePath, 'utf-8'))
-    : [];
+  let oldArticles = [];
+  if (fs.existsSync(dataFilePath)) {
+    const rawData = fs.readFileSync(dataFilePath);
+    oldArticles = JSON.parse(rawData);
+  }
 
-  // 差分取得
-  const newArticles = articles.filter(
-    (article) => !prevData.some((prev) => prev.url === article.url)
-  );
+  const oldUrls = new Set(oldArticles.map((a) => a.url));
+  const newArticles = articles.filter((a) => !oldUrls.has(a.url));
 
-  // 保存
-  fs.writeFileSync(filePath, JSON.stringify(articles, null, 2));
+  if (newArticles.length > 0) {
+    const allArticles = [...newArticles, ...oldArticles];
+    fs.writeFileSync(dataFilePath, JSON.stringify(allArticles, null, 2));
+  }
 
-  // 差分出力
-  const diffPath = path.resolve(__dirname, 'spacedata_diff.json');
-  fs.writeFileSync(diffPath, JSON.stringify(newArticles, null, 2));
-
-  console.log('✅ Scraping completed. New articles:', newArticles.length);
+  console.log(`Scraping completed. New articles: ${newArticles.length}`);
+  if (newArticles.length > 0) {
+    console.log("New articles found:");
+    console.log(newArticles);
+  }
 })();
