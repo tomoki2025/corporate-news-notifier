@@ -1,53 +1,34 @@
 const fs = require('fs');
-const path = require('path');
 const puppeteer = require('puppeteer');
 
-const url = 'https://spacedata.jp/news';
-const dataDir = path.join(__dirname, 'data');
-const outputFile = path.join(dataDir, 'spacedata.json');
-
 (async () => {
-  const browser = await puppeteer.launch({
-    headless: 'new',
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-
+  const url = 'https://spacedata.jp/news';
+  const browser = await puppeteer.launch({ headless: 'new' });
   const page = await browser.newPage();
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 0 });
 
   try {
-    await page.waitForSelector('.newsList__item', { timeout: 15000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 0 });
 
-    const anchors = await page.$$eval('.newsList__item a', as =>
-      as.map(a => ({
-        title: a.querySelector('.newsList__title')?.innerText.trim() || '',
-        date: a.querySelector('.newsList__date')?.innerText.trim() || '',
-        url: a.href
+    // ✅ 正しいセレクタに修正
+    await page.waitForSelector('.newsList li a', { timeout: 15000 });
+
+    const anchors = await page.$$eval('.newsList li a', (as) =>
+      as.map((a) => ({
+        title: a.querySelector('.title')?.innerText.trim() || '',
+        url: a.href,
       }))
     );
 
     console.log(`✅ anchor length: ${anchors.length}`);
     console.log(`✅ first anchor sample: ${anchors[0] ? anchors[0].title : 'N/A'}`);
-    console.log(`🔎 spacedata_new.json 内容確認用：`);
-    console.log(JSON.stringify(anchors, null, 2));
 
-    let oldArticles = [];
-    if (fs.existsSync(outputFile)) {
-      oldArticles = JSON.parse(fs.readFileSync(outputFile, 'utf-8'));
-    }
-
-    const newArticles = anchors.filter(a => !oldArticles.some(old => old.url === a.url));
-    fs.writeFileSync(outputFile, JSON.stringify(anchors, null, 2));
-
-    console.log(`🟡 Scraping completed. New articles: ${newArticles.length}`);
-
-    if (newArticles.length > 0) {
-      const newFile = path.join(dataDir, 'spacedata_new.json');
-      fs.writeFileSync(newFile, JSON.stringify(newArticles, null, 2));
-    }
-  } catch (err) {
-    console.error(`❌ セレクタが取得できませんでした: ${err.message}`);
+    fs.writeFileSync('data/spacedata_new.json', JSON.stringify(anchors, null, 2));
+    console.log(`🔎 spacedata_new.json 内容確認用：\n${JSON.stringify(anchors, null, 2)}`);
+  } catch (error) {
+    console.error(`❌ セレクタが取得できませんでした: ${error.message}`);
+    fs.writeFileSync('data/spacedata_new.json', '[]');
   } finally {
     await browser.close();
+    console.log(`🟡 Scraping completed. New articles: ${fs.existsSync('data/spacedata_new.json') ? JSON.parse(fs.readFileSync('data/spacedata_new.json')).length : 0}`);
   }
 })();
