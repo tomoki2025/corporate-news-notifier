@@ -5,10 +5,18 @@ const puppeteer = require("puppeteer");
 (async () => {
   const browser = await puppeteer.launch({
     headless: "new",
-    args: ["--no-sandbox"], // ←★ ここがエラー回避の決め手！
+    args: ["--no-sandbox"],
   });
   const page = await browser.newPage();
-  await page.goto("https://spacedata.jp/news", { waitUntil: "networkidle2" });
+  await page.goto("https://spacedata.jp/news", { waitUntil: "domcontentloaded" });
+
+  try {
+    await page.waitForSelector(".sd a.appear", { timeout: 5000 });
+  } catch (e) {
+    console.log("⚠️ 記事セレクタが見つかりませんでした");
+    await browser.close();
+    return;
+  }
 
   const articles = await page.evaluate(() => {
     const nodes = document.querySelectorAll(".sd a.appear");
