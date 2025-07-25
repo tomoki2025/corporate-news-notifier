@@ -41,6 +41,8 @@ const outputFile = path.join(dataDir, 'spacedata.json');
     if (newArticles.length > 0) {
       const newFile = path.join(dataDir, 'spacedata_new.json');
       fs.writeFileSync(newFile, JSON.stringify(newArticles, null, 2));
+      console.log('🔎 spacedata_new.json 内容確認用：');
+　　　console.log(JSON.stringify(newArticles, null, 2));
     }
   } catch (err) {
     console.error(`❌ セレクタが取得できませんでした: ${err.message}`);
