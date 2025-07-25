@@ -1,53 +1,47 @@
-const fs = require("fs");
-const path = require("path");
-const puppeteer = require("puppeteer");
+const fs = require('fs');
+const path = require('path');
+const puppeteer = require('puppeteer');
 
-const url = "https://spacedata.jp/news";
-const dataFilePath = path.join(__dirname, "data", "spacedata.json");
+const url = 'https://spacedata.jp/news';
+const dataDir = path.join(__dirname, 'data');
+const outputFile = path.join(dataDir, 'spacedata.json');
 
 (async () => {
-  const browser = await puppeteer.launch({
-    headless: "new",
-    args: ["--no-sandbox", "--disable-setuid-sandbox"]
-  });
+  const browser = await puppeteer.launch({ headless: 'new' });
   const page = await browser.newPage();
-  await page.goto(url, { waitUntil: "networkidle2" });
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 0 });
 
-  // 🔽 追加：セレクタを明示的に待つ（最大10秒）
   try {
-    await page.waitForSelector(".news_list li a", { timeout: 10000 });
-  } catch (e) {
-    console.error("❌ .news_list li a が10秒待っても出現しませんでした");
+    // 👇 ここが重要：明確に <a class="sd appear"> を待つ
+    await page.waitForSelector('a.sd.appear', { timeout: 15000 });
+
+    const anchors = await page.$$eval('a.sd.appear', as =>
+      as.map(a => ({
+        title: a.innerText.trim(),
+        url: a.href
+      }))
+    );
+
+    console.log(`✅ anchor length: ${anchors.length}`);
+    console.log(`✅ first anchor sample: ${anchors[0] ? anchors[0].title : 'N/A'}`);
+
+    let oldArticles = [];
+    if (fs.existsSync(outputFile)) {
+      oldArticles = JSON.parse(fs.readFileSync(outputFile, 'utf-8'));
+    }
+
+    const newArticles = anchors.filter(a => !oldArticles.some(old => old.url === a.url));
+    fs.writeFileSync(outputFile, JSON.stringify(anchors, null, 2));
+
+    console.log(`🟡 Scraping completed. New articles: ${newArticles.length}`);
+
+    if (newArticles.length > 0) {
+      const newFile = path.join(dataDir, 'spacedata_new.json');
+      fs.writeFileSync(newFile, JSON.stringify(newArticles, null, 2));
+    }
+  } catch (err) {
+    console.error(`❌ セレクタが取得できませんでした: ${err.message}`);
+  } finally {
     await browser.close();
-    return;
   }
-
-  const anchors = await page.$$eval(".news_list li a", (elements) => {
-    return elements.map((a) => ({
-      title: a.querySelector("p")?.innerText.trim(),
-      url: a.href,
-      date: a.querySelector("time")?.innerText.trim()
-    }));
-  });
-
-  console.log("✅ anchor length:", anchors.length);
-  console.log("✅ first anchor sample:", anchors[0]);
-
-  await browser.close();
-
-  let oldArticles = [];
-  if (fs.existsSync(dataFilePath)) {
-    const rawData = fs.readFileSync(dataFilePath);
-    oldArticles = JSON.parse(rawData);
-  }
-
-  const oldUrls = new Set(oldArticles.map((a) => a.url));
-  const newArticles = anchors.filter((a) => !oldUrls.has(a.url));
-
-  if (newArticles.length > 0) {
-    const allArticles = [...newArticles, ...oldArticles];
-    fs.writeFileSync(dataFilePath, JSON.stringify(allArticles, null, 2));
-  }
-
-  console.log(`🟡 Scraping completed. New articles: ${newArticles.length}`);
 })();
