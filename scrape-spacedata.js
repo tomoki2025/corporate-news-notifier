@@ -1,52 +1,46 @@
-const puppeteer = require("puppeteer");
-const fs = require("fs");
-const path = require("path");
+const puppeteer = require('puppeteer');
+const fs = require('fs');
+const path = require('path');
+
+const filePath = path.join(__dirname, 'data', 'spacedata.json');
+const diffPath = path.join(__dirname, 'data', 'spacedata_diff.json');
 
 (async () => {
-  const browser = await puppeteer.launch({
-    headless: "new",
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
+  const browser = await puppeteer.launch({ headless: 'new' });
   const page = await browser.newPage();
-  await page.goto("https://spacedata.jp/news", { waitUntil: "domcontentloaded" });
 
-  // 十分な描画時間を確保（5秒）
-  await page.waitForTimeout(5000);
+  await page.goto('https://spacedata.jp/news', { waitUntil: 'networkidle2' });
 
-  const articles = await page.evaluate(() => {
-    const anchors = Array.from(document.querySelectorAll("a.sd.appear"));
-    return anchors.map(a => ({
-      title: a.textContent.trim(),
-      url: a.href,
-      date: (a.querySelector("p")?.textContent || "").trim()
-    }));
-  });
+  // 必要に応じて描画を待つ
+  await new Promise(resolve => setTimeout(resolve, 3000));
 
-  // 保存先ディレクトリ作成
-  const dataDir = path.join(__dirname, "data");
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir);
-  }
+  const articles = await page.$$eval('a.sd.appear', links =>
+    links.map(link => {
+      const ps = link.querySelectorAll('p.text.sd.appear');
 
-  // 保存先ファイル
-  const filePath = path.join(dataDir, "spacedata.json");
+      return {
+        title: ps[2]?.innerText.trim() || '',             // タイトル文
+        date: ps[0]?.innerText.trim() || '',              // 公開日
+        category: ps[1]?.innerText.trim() || '',          // ニュース／プレスリリース等
+        summary: ps[3]?.innerText.trim() || '',           // 本文リード文
+        url: new URL(link.getAttribute('href'), 'https://spacedata.jp').toString()
+      };
+    })
+  );
 
-  // 既存データの読み込み
-  let existing = [];
+  // 差分検出（URLで判定）
+  let oldArticles = [];
   if (fs.existsSync(filePath)) {
-    existing = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+    oldArticles = JSON.parse(fs.readFileSync(filePath, 'utf8'));
   }
 
-  // 差分抽出
-  const existingUrls = new Set(existing.map(a => a.url));
-  const newArticles = articles.filter(a => !existingUrls.has(a.url));
+  const oldUrls = oldArticles.map(a => a.url);
+  const newArticles = articles.filter(a => !oldUrls.includes(a.url));
 
-  // 保存
-  fs.writeFileSync(filePath, JSON.stringify([...newArticles, ...existing], null, 2));
+  fs.writeFileSync(filePath, JSON.stringify(articles, null, 2));
+  fs.writeFileSync(diffPath, JSON.stringify(newArticles, null, 2));
 
-  // 出力
-  console.log("取得した記事数:", newArticles.length);
-  console.log(newArticles);
+  console.log('✅ 完了：記事取得件数 =', articles.length, ' 差分 =', newArticles.length);
 
   await browser.close();
 })();
