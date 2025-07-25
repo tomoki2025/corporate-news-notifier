@@ -3,7 +3,10 @@ const path = require("path");
 const puppeteer = require("puppeteer");
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: "new" });
+  const browser = await puppeteer.launch({
+    headless: "new",
+    args: ["--no-sandbox"], // ←★ ここがエラー回避の決め手！
+  });
   const page = await browser.newPage();
   await page.goto("https://spacedata.jp/news", { waitUntil: "networkidle2" });
 
