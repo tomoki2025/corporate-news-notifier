@@ -13,6 +13,15 @@ const dataFilePath = path.join(__dirname, "data", "spacedata.json");
   const page = await browser.newPage();
   await page.goto(url, { waitUntil: "networkidle2" });
 
+  // 🔽 追加：セレクタを明示的に待つ（最大10秒）
+  try {
+    await page.waitForSelector(".news_list li a", { timeout: 10000 });
+  } catch (e) {
+    console.error("❌ .news_list li a が10秒待っても出現しませんでした");
+    await browser.close();
+    return;
+  }
+
   const anchors = await page.$$eval(".news_list li a", (elements) => {
     return elements.map((a) => ({
       title: a.querySelector("p")?.innerText.trim(),
