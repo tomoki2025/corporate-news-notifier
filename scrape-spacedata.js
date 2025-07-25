@@ -1,26 +1,34 @@
-const puppeteer = require('puppeteer');
+const fs = require("fs");
+const path = require("path");
+const puppeteer = require("puppeteer");
 
 (async () => {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-
+  const browser = await puppeteer.launch({ headless: "new" });
   const page = await browser.newPage();
-  await page.goto('https://spacedata.jp/news', { waitUntil: 'domcontentloaded' });
+  await page.goto("https://spacedata.jp/news", { waitUntil: "networkidle2" });
 
   const articles = await page.evaluate(() => {
-    const items = Array.from(document.querySelectorAll('a.sd.appear'));
-    return items.map(item => {
-      const title = item.querySelector('.title')?.innerText || '';
-      const date = item.querySelector('.date')?.innerText || '';
-      const url = item.href || '';
-      return { title, date, url };
+    const nodes = document.querySelectorAll(".sd a.appear");
+    const items = [];
+
+    nodes.forEach((el) => {
+      const title = el.querySelector(".title")?.textContent?.trim() || "";
+      const url = el.href;
+      const date = el.querySelector(".date")?.textContent?.trim() || "";
+
+      if (title && url) {
+        items.push({ title, url, date });
+      }
     });
+
+    return items;
   });
 
-  console.log('✅ 取得した記事数:', articles.length);
-  console.log(JSON.stringify(articles, null, 2));
-
   await browser.close();
+
+  const filePath = path.join("data", "spacedata.json");
+  fs.writeFileSync(filePath, JSON.stringify(articles, null, 2), "utf-8");
+
+  console.log(`✅ 取得した記事数: ${articles.length}`);
+  console.log(articles);
 })();
