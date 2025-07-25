@@ -18,15 +18,24 @@ const outputFile = path.join(dataDir, 'spacedata.json');
   try {
     await page.waitForSelector('a.sd.appear', { timeout: 15000 });
 
-    const anchors = await page.$$eval('a.sd.appear', as =>
-      as.map(a => ({
-        title: a.innerText.trim(),
-        url: a.href
-      }))
+    const anchors = await page.$$eval('a.sd.appear', as => 
+      as
+        .filter(a => a.href.includes('/news/')) // ニュースのみ対象
+        .map(a => {
+          const titleEl = a.querySelectorAll('p.text.sd.appear')[2]; // タイトル
+          const dateEl = a.querySelectorAll('p.text.sd.appear')[0]; // 日付
+          return {
+            title: titleEl ? titleEl.innerText.trim() : '',
+            date: dateEl ? dateEl.innerText.trim() : '',
+            url: a.href
+          };
+        })
     );
 
     console.log(`✅ anchor length: ${anchors.length}`);
     console.log(`✅ first anchor sample: ${anchors[0] ? anchors[0].title : 'N/A'}`);
+    console.log(`🔎 spacedata_new.json 内容確認用：`);
+    console.log(JSON.stringify(anchors, null, 2));
 
     let oldArticles = [];
     if (fs.existsSync(outputFile)) {
@@ -41,8 +50,6 @@ const outputFile = path.join(dataDir, 'spacedata.json');
     if (newArticles.length > 0) {
       const newFile = path.join(dataDir, 'spacedata_new.json');
       fs.writeFileSync(newFile, JSON.stringify(newArticles, null, 2));
-      console.log('🔎 spacedata_new.json 内容確認用：');
-　　　console.log(JSON.stringify(newArticles, null, 2));
     }
   } catch (err) {
     console.error(`❌ セレクタが取得できませんでした: ${err.message}`);
