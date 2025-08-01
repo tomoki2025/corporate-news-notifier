@@ -1,21 +1,29 @@
 const puppeteer = require('puppeteer');
+const fs = require('fs');
+const path = require('path');
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: 'new' });
+  const browser = await puppeteer.launch({
+    headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
+
   const page = await browser.newPage();
   await page.goto('https://spacedata.jp/news', { waitUntil: 'networkidle2' });
 
-  // 明示的に数秒待機する（JSレンダリング対応）
-  await page.waitForTimeout(5000);
+  await page.waitForSelector('.news-items li a.news-link');
 
-  const newsItems = await page.$$eval('.news-items li a.news-link', links =>
-    links.map(link => ({
-      title: link.innerText.trim(),
-      url: link.href
+  const links = await page.$$eval('.news-items li a.news-link', anchors =>
+    anchors.map(anchor => ({
+      title: anchor.textContent.trim(),
+      url: anchor.href
     }))
   );
 
-  console.log(newsItems);
+  const filePath = path.join(__dirname, 'data', 'spacedata.json');
+  fs.writeFileSync(filePath, JSON.stringify(links, null, 2));
+
+  console.log('✅ SpaceDataニュース取得完了');
 
   await browser.close();
 })();
