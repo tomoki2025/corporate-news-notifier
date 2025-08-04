@@ -17,62 +17,84 @@ const newFile = path.join(dataDir, 'spacedata_new.json');
   await page.goto(url, { waitUntil: 'networkidle2', timeout: 0 });
 
   try {
-    // セレクタが出現するまで待機
     await page.waitForSelector('a.sd.appear', { timeout: 30000 });
 
-    // 要素抽出 ＋ 不要リンク除外
-    const anchors = await page.$$eval('a.sd.appear', as =>
+    // ニュース記事へのURLだけを抽出
+    const articleLinks = await page.$$eval('a.sd.appear', as =>
       as
-        .map(a => ({
-          title: a.innerText.trim(),
-          url: a.href,
-          company: "SpaceData",
-          date: new Date().toISOString().split('T')[0]
-        }))
-        .filter(item =>
-          item.url.includes('/news/') &&
-          !item.url.includes('/category') &&
-          !item.url.endsWith('/news') &&
-          !item.url.includes('company') &&
-          !item.url.includes('recruit') &&
-          !item.url.includes('case') &&
-          !item.url.includes('contact') &&
-          !item.url.includes('youtube') &&
-          !item.url.includes('x.com') &&
-          !item.url.includes('instagram') &&
-          !item.url.includes('linkedin')
+        .map(a => a.href)
+        .filter(href =>
+          href.includes('/news/') &&
+          !href.includes('/category') &&
+          !href.endsWith('/news') &&
+          !href.includes('company') &&
+          !href.includes('recruit') &&
+          !href.includes('case') &&
+          !href.includes('contact') &&
+          !href.includes('youtube') &&
+          !href.includes('x.com') &&
+          !href.includes('instagram') &&
+          !href.includes('linkedin')
         )
     );
 
-    console.log(`✅ anchor length: ${anchors.length}`);
-    console.log(`✅ first anchor sample: ${anchors[0] ? anchors[0].title : 'N/A'}`);
+    const articles = [];
 
-    // dataディレクトリがなければ作成
+    for (const link of articleLinks) {
+      try {
+        const articlePage = await browser.newPage();
+        await articlePage.goto(link, { waitUntil: 'domcontentloaded', timeout: 0 });
+
+        const result = await articlePage.evaluate(() => {
+          const dateMatch = document.body.innerText.match(/\d{4}\/\d{1,2}\/\d{1,2}/);
+          const date = dateMatch ? dateMatch[0] : null;
+
+          const titleEl = document.querySelector('main h1');
+          const title = titleEl ? titleEl.innerText.trim() : null;
+
+          const p = document.querySelector('main p');
+          const summary = p ? p.innerText.trim().replace(/\s+/g, ' ') : null;
+
+          return { date, title, summary };
+        });
+
+        if (result.title && result.date && result.summary) {
+          articles.push({
+            company: 'SpaceData',
+            date: result.date,
+            title: result.title,
+            summary: result.summary,
+            url: link
+          });
+        }
+
+        await articlePage.close();
+      } catch (e) {
+        console.warn(`⚠️ 記事取得失敗: ${link}`);
+      }
+    }
+
+    // data/ フォルダ作成
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir);
     }
 
-    // 既存データ読み込み
     let oldArticles = [];
     if (fs.existsSync(outputFile)) {
       oldArticles = JSON.parse(fs.readFileSync(outputFile, 'utf-8'));
     }
 
-    // 差分抽出
-    const newArticles = anchors.filter(
-      a => !oldArticles.some(old => old.url === a.url)
-    );
+    const newArticles = articles.filter(a => !oldArticles.some(old => old.url === a.url));
 
-    // 全データ保存（旧ファイル）
-    fs.writeFileSync(outputFile, JSON.stringify(anchors, null, 2));
+    fs.writeFileSync(outputFile, JSON.stringify(articles, null, 2));
 
-    // 新着だけ保存（通知用）
     if (newArticles.length > 0) {
       fs.writeFileSync(newFile, JSON.stringify(newArticles, null, 2));
       console.log('🆕 spacedata_new.json に新着を書き込みました');
     } else {
       console.log('✅ 新着ニュースはありません');
     }
+
   } catch (err) {
     console.error(`❌ セレクタ取得失敗: ${err.message}`);
   } finally {
