@@ -1,35 +1,25 @@
 const fs = require("fs");
 const path = require("path");
 
-const dataDir = path.join(__dirname, "data");
-const newFile = path.join(dataDir, "spacedata_new.json");
-const oldFile = path.join(dataDir, "spacedata_old.json");
+async function main() {
+  const sitesDir = path.join(__dirname, "src", "sites");
+  const siteFiles = fs
+    .readdirSync(sitesDir)
+    .filter((file) => file.endsWith(".js"));
 
-function normalize(text) {
-  return text.replace(/\s+/g, " ").trim();
-}
+  for (const file of siteFiles) {
+    const sitePath = path.join(sitesDir, file);
+    const siteName = path.basename(file, ".js");
 
-function getNews() {
-  if (!fs.existsSync(newFile)) {
-    console.warn("⚠️ spacedata_new.json が存在しません");
-    return [];
+    try {
+      console.log(`🚀 スクレイピング開始: ${siteName}`);
+      const scrape = require(sitePath);
+      await scrape();
+      console.log(`✅ 完了: ${siteName}\n`);
+    } catch (err) {
+      console.error(`❌ エラー（${siteName}）: ${err.message}`);
+    }
   }
-
-  const newData = JSON.parse(fs.readFileSync(newFile));
-  const oldData = fs.existsSync(oldFile)
-    ? JSON.parse(fs.readFileSync(oldFile))
-    : [];
-
-  const oldUrls = new Set(oldData.map(n => n.url));
-  const oldTitles = new Set(oldData.map(n => normalize(n.title)));
-
-  const diff = newData.filter(
-    n => !oldUrls.has(n.url) && !oldTitles.has(normalize(n.title))
-  );
-
-  fs.writeFileSync(oldFile, JSON.stringify(newData, null, 2));
-
-  return diff;
 }
 
-module.exports = { getNews };
+main();
