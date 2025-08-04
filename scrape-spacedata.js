@@ -13,12 +13,12 @@ const outputFile = path.join(dataDir, 'spacedata.json');
   });
 
   const page = await browser.newPage();
-  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 0 });
+  await page.goto(url, { waitUntil: 'networkidle2', timeout: 0 });
 
   try {
-    await page.waitForSelector('div.news-list a', { timeout: 30000 });
+    await page.waitForSelector('a.sd.appear', { timeout: 30000 });
 
-    const anchors = await page.$$eval('div.news-list a', as =>
+    const anchors = await page.$$eval('a.sd.appear', as =>
       as.map(a => ({
         title: a.innerText.trim(),
         url: a.href
