@@ -20,14 +20,28 @@ const newFile = path.join(dataDir, 'spacedata_new.json');
     // セレクタが出現するまで待機
     await page.waitForSelector('a.sd.appear', { timeout: 30000 });
 
-    // 要素抽出
+    // 要素抽出 ＋ 不要リンク除外
     const anchors = await page.$$eval('a.sd.appear', as =>
-      as.map(a => ({
-        title: a.innerText.trim(),
-        url: a.href,
-        company: "SpaceData", // ← 追加：通知用
-        date: new Date().toISOString().split('T')[0] // ← 追加：通知用
-      }))
+      as
+        .map(a => ({
+          title: a.innerText.trim(),
+          url: a.href,
+          company: "SpaceData",
+          date: new Date().toISOString().split('T')[0]
+        }))
+        .filter(item =>
+          item.url.includes('/news/') &&
+          !item.url.includes('/category') &&
+          !item.url.endsWith('/news') &&
+          !item.url.includes('company') &&
+          !item.url.includes('recruit') &&
+          !item.url.includes('case') &&
+          !item.url.includes('contact') &&
+          !item.url.includes('youtube') &&
+          !item.url.includes('x.com') &&
+          !item.url.includes('instagram') &&
+          !item.url.includes('linkedin')
+        )
     );
 
     console.log(`✅ anchor length: ${anchors.length}`);
