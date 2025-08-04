@@ -30,8 +30,9 @@ jobs:
       - name: Create data directory if not exists
         run: mkdir -p data
 
-      - name: Run SpaceData scrape
-        run: node scrape-spacedata.js
+      - name: Run unified scrape
+        run: node send-mail.js
+
 
       - name: Run mail script
         run: node send-mail.js
