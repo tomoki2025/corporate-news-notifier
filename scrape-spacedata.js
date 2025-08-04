@@ -5,6 +5,7 @@ const puppeteer = require('puppeteer');
 const url = 'https://spacedata.jp/news';
 const dataDir = path.join(__dirname, 'data');
 const outputFile = path.join(dataDir, 'spacedata.json');
+const newFile = path.join(dataDir, 'spacedata_new.json');
 
 (async () => {
   const browser = await puppeteer.launch({
@@ -16,33 +17,47 @@ const outputFile = path.join(dataDir, 'spacedata.json');
   await page.goto(url, { waitUntil: 'networkidle2', timeout: 0 });
 
   try {
+    // セレクタが出現するまで待機
     await page.waitForSelector('a.sd.appear', { timeout: 30000 });
 
+    // 要素抽出
     const anchors = await page.$$eval('a.sd.appear', as =>
       as.map(a => ({
         title: a.innerText.trim(),
-        url: a.href
+        url: a.href,
+        company: "SpaceData", // ← 追加：通知用
+        date: new Date().toISOString().split('T')[0] // ← 追加：通知用
       }))
     );
 
     console.log(`✅ anchor length: ${anchors.length}`);
     console.log(`✅ first anchor sample: ${anchors[0] ? anchors[0].title : 'N/A'}`);
 
+    // dataディレクトリがなければ作成
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir);
+    }
+
+    // 既存データ読み込み
     let oldArticles = [];
     if (fs.existsSync(outputFile)) {
       oldArticles = JSON.parse(fs.readFileSync(outputFile, 'utf-8'));
     }
 
-    const newArticles = anchors.filter(a => !oldArticles.some(old => old.url === a.url));
+    // 差分抽出
+    const newArticles = anchors.filter(
+      a => !oldArticles.some(old => old.url === a.url)
+    );
+
+    // 全データ保存（旧ファイル）
     fs.writeFileSync(outputFile, JSON.stringify(anchors, null, 2));
 
-    console.log(`🟡 Scraping completed. New articles: ${newArticles.length}`);
-
+    // 新着だけ保存（通知用）
     if (newArticles.length > 0) {
-      const newFile = path.join(dataDir, 'spacedata_new.json');
       fs.writeFileSync(newFile, JSON.stringify(newArticles, null, 2));
-      console.log('🔎 spacedata_new.json 内容確認用：');
-      console.log(JSON.stringify(newArticles, null, 2));
+      console.log('🆕 spacedata_new.json に新着を書き込みました');
+    } else {
+      console.log('✅ 新着ニュースはありません');
     }
   } catch (err) {
     console.error(`❌ セレクタ取得失敗: ${err.message}`);
