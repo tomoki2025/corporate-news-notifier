@@ -7,7 +7,7 @@ const dataDir = path.join(__dirname, 'data');
 const outputFile = path.join(dataDir, 'spacedata.json');
 const newFile = path.join(dataDir, 'spacedata_new.json');
 
-(async () => {
+async function scrapeSpaceData() {
   const browser = await puppeteer.launch({
     headless: 'new',
     args: ['--no-sandbox', '--disable-setuid-sandbox']
@@ -19,7 +19,6 @@ const newFile = path.join(dataDir, 'spacedata_new.json');
   try {
     await page.waitForSelector('a.sd.appear', { timeout: 30000 });
 
-    // ニュース記事へのURLだけを抽出
     const articleLinks = await page.$$eval('a.sd.appear', as =>
       as
         .map(a => a.href)
@@ -74,7 +73,6 @@ const newFile = path.join(dataDir, 'spacedata_new.json');
       }
     }
 
-    // data/ フォルダ作成
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir);
     }
@@ -100,4 +98,6 @@ const newFile = path.join(dataDir, 'spacedata_new.json');
   } finally {
     await browser.close();
   }
-})();
+}
+
+module.exports = scrapeSpaceData;
