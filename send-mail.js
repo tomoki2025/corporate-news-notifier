@@ -1,6 +1,6 @@
-require("dotenv").config();
+  require("dotenv").config();
 const nodemailer = require("nodemailer");
-const { getNews } = require("./scrape-news");
+const getNews = require("./scrape-news");  
 
 async function sendEmail() {
   const news = await getNews();
